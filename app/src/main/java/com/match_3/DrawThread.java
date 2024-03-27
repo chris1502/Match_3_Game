@@ -4,7 +4,7 @@ import android.graphics.Canvas;
 
 public class DrawThread extends Thread {
 
-    private GameView view;
+    private final GameView view;
     public boolean running = false;
     public static int fps;
     public static int ups;
@@ -43,14 +43,23 @@ public class DrawThread extends Thread {
             updates ++;
             uDeltaTime -= uOPTIMAL_TIME;
         }
-        if (fDeltaTime >fOPTIMAL_TIME){
+        if (fDeltaTime >fOPTIMAL_TIME) {
             Canvas canvas = view.getHolder().lockCanvas(null);
-        if (canvas != null){
-            synchronized (view.getHolder()){
-                view.draw(canvas);
+            if (canvas != null) {
+                synchronized (view.getHolder()) {
+                    view.draw(canvas);
+                }
+                view.getHolder().unlockCanvasAndPost(canvas);
             }
-            view.getHolder().unlockCanvasAndPost(canvas);
+            frames++;
+            fDeltaTime -= fOPTIMAL_TIME;
         }
+        if (System.currentTimeMillis() - timer >= 1000){
+            fps = frames;
+            ups = updates;
+            updates = 0;
+            frames = 0;
+            timer += 100;
         }
         }
 
