@@ -19,6 +19,7 @@ import android.view.SurfaceView;
 import androidx.annotation.NonNull;
 
 import java.util.ArrayList;
+import java.util.Random;
 
 public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
@@ -42,6 +43,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
     private int swapIndex = 8;
     public GameState gameState;
+    private boolean drop_stop;
     private int [][] level = {
             {3, 2, 1, 2, 3, 1, 5, 4, 6},
             {5, 3, 6, 3, 1, 5, 4, 5, 1},
@@ -54,6 +56,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             {5, 2, 1, 2, 3, 1, 5, 2, 1}
     };
 
+    private Jewel [] topBoard;
     public GameView(Context context) {
         super(context);
         getHolder().addCallback(this);
@@ -71,6 +74,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             for (int j = 0; j < level[0].length; j++) {
                 board[i][j] = new Jewel((int) drawX + (cellWidth*j), (int) drawY + (cellWidth*i), level[i][j]);
             }
+        }
+        topBoard = new Jewel[board[0].length];
+        for (int j=0;j<board.length;j++){
+            topBoard[j] = new Jewel((int) (drawX + j * cellWidth), (int) (drawY - cellWidth),0);
         }
     }
 
@@ -96,11 +103,82 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 }
 
                 if (search.isEmpty()) {
-                    gameState = GameState.nothing;
+                    gameState = GameState.update;
                 }
                 break;
             case update:
+                drop();
+                fillTopBoard();
+                fillCrushing();
+                if (search.isEmpty()){
+                    if (!checkDrop()){
+                        gameState = GameState.nothing;
+                    }
+                }else {
+                    gameState = GameState.crushing;
+                }
+                drop_stop = false;
                 break;
+        }
+    }
+
+    private boolean checkDrop() {
+        boolean drop = false;
+        for (Jewel[] jewels :board){
+            for (Jewel jewel : jewels){
+                if (jewel.color ==0){
+                    drop = true;
+                    break;
+                }
+            }
+        }
+        return  drop;
+    }
+    private void fillTopBoard(){
+        for (int j=0;j<topBoard.length;j++){
+            if (topBoard[j].color == 0){
+                topBoard[j].color = generateNewJewels();
+                if (j>0){
+                    if (topBoard[j].color == topBoard[j-1].color){
+                        topBoard[j].color = topBoard[j].color % 6+1;
+                    }
+                }
+            }
+        }
+    }
+
+    private int generateNewJewels(){
+        Random random = new Random();
+        return random.nextInt(6) % 6+1;
+    }
+    private void drop(){
+        for (int k=0;k<topBoard.length;k++){
+            if (board[0][k].color == 0){
+                topBoard[k].poseY += cellWidth/8;
+                if ((int) drawY - topBoard[k].poseY < cellWidth/8){
+                    board[0][k].color = topBoard[k].color;
+                    topBoard[k].color = 0;
+                    topBoard[k].poseY = board[0][k].poseY - cellWidth;
+                    topBoard[k].poseX = (int) drawX + k * cellWidth;
+                    drop_stop = true;
+                }
+            }
+        }
+        for (int i=0;i<board.length-1;i++){
+            for (int j=0;j<board[0].length;j++){
+                if(board[i][j].color >0){
+                   if (board [i+1][j].color ==0){
+                      board[i][j].poseY += cellWidth/8;
+                      if (((int)drawY + (i + 1) * cellWidth)- board[i][j].poseY < cellWidth/8){
+                          board[i + 1][j].color = board[i][j].color;
+                          board[i][j].color = 0;
+                          board[i][j].poseY = (int) (drawY) + i * cellWidth;
+                          board[i][j].poseX = (int) (drawX) + j * cellWidth;
+                          drop_stop = true;
+                      }
+                    }
+                }
+            }
         }
     }
 
